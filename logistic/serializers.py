@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from pprint import pprint
 
 from logistic.models import Product, Stock, StockProduct
 
@@ -12,7 +13,7 @@ class ProductSerializer(serializers.ModelSerializer):
 class ProductPositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockProduct
-        fields = ['id', 'stock', 'product', 'quantity', 'price']
+        fields = ['id', 'product', 'quantity', 'price']
 
 
 class StockSerializer(serializers.ModelSerializer):
@@ -34,7 +35,7 @@ class StockSerializer(serializers.ModelSerializer):
         # с помощью списка positions
         for position in positions:
             stock_product = StockProduct(
-                stock=stock['id'],
+                stock=stock,
                 product=position['product'],
                 quantity=position['quantity'],
                 price=position['price']
@@ -53,9 +54,14 @@ class StockSerializer(serializers.ModelSerializer):
         # здесь вам надо обновить связанные таблицы
         # в нашем случае: таблицу StockProduct
         # с помощью списка positions
-        instance.product = validated_data.get('product', instance.product)
-        instance.quantity = validated_data.get('quantity', instance.quantity)
-        instance.price = validated_data.get('price', instance.price)
-        instance.save()
+        for position in positions:
+            StockProduct.objects.update_or_create(
+                stock=stock,
+                product=position['product'],
+                defaults={
+                    'price': position['price'],
+                    'quantity': position['quantity']
+                }
+            )
 
         return stock
